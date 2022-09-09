@@ -12,9 +12,25 @@ public class TCPIPServerAsync : MonoBehaviour
     [SerializeField]
     private GameObject carPrefab;
 
+    [SerializeField]
+    private GameObject lightController;
+
+    public int stepFrames;
+
     private int carPop = -1;
+    private bool carInit = false;
+    private string[] carsInitialPos;
     private List<GameObject> cars = new List<GameObject>();
-    private Queue<string[]> movementQueue = new Queue<string[]>();
+    //private Queue<string[]> movementQueue = new Queue<string[]>();
+    private Queue<Step> stepQueue = new Queue<Step>();
+
+    private int frameCount = 0;
+
+    struct Step
+    {
+        public List<string[]> carData;
+        public List<string[]> lightData;
+    }
 
     // Use this for initialization
 
@@ -29,37 +45,95 @@ public class TCPIPServerAsync : MonoBehaviour
 
     private void Update()
     {
-        if(carPop != -1)
+        //if(carPop != -1)
+        if(carInit)
         {
             for (int i = 0; i < carPop; i++)
             {
-                cars.Add((GameObject)Instantiate(carPrefab, new Vector3(9, 0, 0), Quaternion.identity, transform));
-             }
-            carPop = -1;
+                string[] carPos = carsInitialPos[i].Split(' ');
+                cars.Add((GameObject)Instantiate(carPrefab, new Vector3(Int32.Parse(carPos[0]), 0, Int32.Parse(carPos[1])), Quaternion.identity, transform));
+                cars[i].GetComponent<Car>().nextX = Int32.Parse(carPos[0]);
+                cars[i].GetComponent<Car>().nextZ = Int32.Parse(carPos[1]);
+
+            }
+            carInit = false;
         }
 
-        
-        if(movementQueue.Count != 0)
+        if (frameCount >= stepFrames)
         {
-            int id, x, z;
+            if (stepQueue.Count != 0)
+            {
+                Step currentStep = stepQueue.Dequeue();
 
-            id = Int32.Parse(movementQueue.Peek()[0]);
-            x = Int32.Parse(movementQueue.Peek()[1]);
-            z = Int32.Parse(movementQueue.Peek()[2]);
+                for (int i = 0; i < currentStep.carData.Count; i++)
+                {
+                    int id, x, z;
+                    string dir, respawning;
 
-            Debug.Log("Car ID: " + id);
-            Debug.Log("x: " + x);
-            Debug.Log("z: " + z);
+                    id = Int32.Parse(currentStep.carData[i][0]);
+                    x = Int32.Parse(currentStep.carData[i][1]);
+                    z = Int32.Parse(currentStep.carData[i][2]);
+                    dir = currentStep.carData[i][3];
+                    respawning = currentStep.carData[i][4];
 
-            //transform.GetChild(id).GetComponent<Car>().moveCar(x,z);
+                    //Debug.Log("Car ID: " + id);
+                    //Debug.Log("x: " + x);
+                    //Debug.Log("z: " + z);
 
-            transform.GetChild(id).position = Vector3.MoveTowards(transform.position, new Vector3(x, 0, z), 1f * Time.deltaTime);
-            //transform.GetChild(id).position = Vector3.MoveTowards(transform.position, new Vector3(0, 0, 0), 1f * Time.deltaTime);
+                    //transform.GetChild(id).position = new Vector3(x, 0, z);
+                    //transform.GetChild(id).position = Vector3.MoveTowards(transform.GetChild(id).position, new Vector3(x, 0, z), 1);
+                    transform.GetChild(id).GetComponent<Car>().nextX = x;
+                    transform.GetChild(id).GetComponent<Car>().nextZ = z;
+                    transform.GetChild(id).GetComponent<Car>().respawning = respawning;
 
 
-            movementQueue.Dequeue();
+                    switch (dir)
+                    {
+                        case "up":
+                            transform.GetChild(id).rotation = Quaternion.Euler(0, 90, 0);
+                            break;
+                        case "down":
+                            transform.GetChild(id).rotation = Quaternion.Euler(0, -90, 0);
+                            break;
+                        case "left":
+                            transform.GetChild(id).rotation = Quaternion.Euler(0, 0, 0);
+                            break;
+                        case "right":
+                            transform.GetChild(id).rotation = Quaternion.Euler(0, 180, 0);
+                            break;
+                    }
+                }
+
+                for (int i = 0; i < currentStep.lightData.Count; i++)
+                {
+                    string dir, color;
+                    dir = currentStep.lightData[i][0];
+                    color = currentStep.lightData[i][1];
+
+                    lightController.GetComponent<StoplightController>().changeLights(dir, color);
+                }
+                frameCount = -1;
+            }
         }
-        
+
+        for(int i = 0; i < carPop; i++)
+        {
+            int x = transform.GetChild(i).GetComponent<Car>().nextX;
+            int z = transform.GetChild(i).GetComponent<Car>().nextZ;
+            //Debug.Log("ID: " + i);
+            //Debug.Log("X: " + x);
+            //Debug.Log("Z: " + z);
+
+            if (transform.GetChild(i).GetComponent<Car>().respawning == "false")
+            {
+                transform.GetChild(i).position = Vector3.MoveTowards(transform.GetChild(i).position, new Vector3(x, 0, z), 1f/stepFrames);
+            }
+            else
+            {
+                transform.GetChild(i).position = new Vector3(x, 0, z);
+            }
+        }
+        frameCount++;
     }
 
     void startServer()
@@ -135,10 +209,14 @@ public class TCPIPServerAsync : MonoBehaviour
                 data = System.Text.Encoding.ASCII.GetString(bytes, 0, bytesRec);
                 carPop = Int32.Parse(data);
 
+                bytesRec = handler.Receive(bytes);
+                data = System.Text.Encoding.ASCII.GetString(bytes, 0, bytesRec);
+                carsInitialPos = data.Split('$');
+                carInit = true;
+
                 // An incoming connection needs to be processed.
                 while (keepReading)
                 {
-                    string[] carData;
 
                     bytes = new byte[1024];
                     bytesRec = handler.Receive(bytes);
@@ -153,33 +231,32 @@ public class TCPIPServerAsync : MonoBehaviour
 
                     data = System.Text.Encoding.ASCII.GetString(bytes, 0, bytesRec);
 
-                    string[] dataBuffer = (data.Split('$'));
-                    for(int i = 0; i < dataBuffer.Length; i++)
+                    string[] dataBuffer = (data.Split('%'));
+                    string[] carDataBuffer = (dataBuffer[0].Split('$'));
+                    string[] lightDataBuffer = (dataBuffer[1].Split('$'));
+
+                    Step paso;
+                    paso.carData = new List<string[]>();
+                    paso.lightData = new List<string[]>();
+
+                    for (int i = 0; i < carDataBuffer.Length; i++)
                     {
-                        if(dataBuffer[i] != "")
+                        if(carDataBuffer[i] != "")
                         {
-                            carData = (dataBuffer[i].Split(' '));
-                            movementQueue.Enqueue(carData);
+                            paso.carData.Add(carDataBuffer[i].Split(' '));
                         }
                     }
 
-                    //Debug.Log(data);
-                    
-
-
-                    /*
-                    for(int i = 0; i < carData.Length; i++)
+                    for (int i = 0; i < lightDataBuffer.Length; i++)
                     {
-                        Debug.Log("Received from Server: " + carData[i]);
+                        if(lightDataBuffer[i] != "")
+                        {
+                            paso.lightData.Add(lightDataBuffer[i].Split(' '));
+                        }
                     }
 
-                    
-                    Debug.Log("Received from Server: " + data);
-                    if (data.IndexOf("<EOF>") > -1)
-                    {
-                        break;
-                    }
-                    */
+                    stepQueue.Enqueue(paso);
+                    handler.Send(System.Text.Encoding.Default.GetBytes("Wait"));
 
                     System.Threading.Thread.Sleep(1);
                 }

@@ -10,7 +10,7 @@ public class ChangeColor : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        if (direction == "up")
+        if (direction == "north")
         {
             GetComponent<MeshRenderer>().material = green;
             state = 1;
@@ -23,6 +23,7 @@ public class ChangeColor : MonoBehaviour
     }
 
     // Update is called once per frame
+    /*
     void Update()
     {
         if (Input.GetKey(KeyCode.Q))
@@ -78,7 +79,42 @@ public class ChangeColor : MonoBehaviour
             }
         }
     }
+    */
 
+    public void colorChanger(string color)
+    {
+        if (color == "green")
+        {
+            GetComponent<MeshRenderer>().material = green;
+        }
+        else if (color == "yellow")
+        {
+            GetComponent<MeshRenderer>().material = yellow;
+        }
+        else if (color == "red")
+        {
+            GetComponent<MeshRenderer>().material = red;
+        }
+
+        /*
+        if (dir == direction)
+        {
+            if (color == "green")
+            {
+                GetComponent<MeshRenderer>().material = green;
+            }
+            else if (color == "yellow")
+            {
+                GetComponent<MeshRenderer>().material = yellow;
+            }
+            else if (color == "red")
+            {
+                GetComponent<MeshRenderer>().material = red;
+            }
+        }
+        */
+    }
+    /*
     private IEnumerator ChangeToGreen()
     {
         yield return new WaitForSeconds(8);
@@ -91,4 +127,5 @@ public class ChangeColor : MonoBehaviour
         yield return new WaitForSeconds(5);
         GetComponent<MeshRenderer>().material = red;
     }
+    */
 }

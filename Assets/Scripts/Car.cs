@@ -4,8 +4,20 @@ using UnityEngine;
 
 public class Car : MonoBehaviour
 {
-    public void moveCar(int x, int z)
+    public int nextX;
+    public int nextZ;
+    public string respawning;
+
+    private void Start()
     {
-        transform.position = Vector3.MoveTowards(transform.position, new Vector3(x, 0, z), 10 * Time.deltaTime);
+        respawning = "false";
+        Renderer carRenderer = transform.GetChild(0).GetComponent<Renderer>();
+        carRenderer.material.SetColor("_Color", Random.ColorHSV(0f, 1f, 1f, 1f, 0.5f, 1f));
+    }
+
+    public void newPos(int x, int z)
+    {
+        nextX = x;
+        nextZ = z;
     }
 }
