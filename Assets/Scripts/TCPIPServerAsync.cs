@@ -15,7 +15,9 @@ public class TCPIPServerAsync : MonoBehaviour
     [SerializeField]
     private GameObject lightController;
 
+    [Range(1, 60)]
     public int stepFrames;
+
 
     private int carPop = -1;
     private bool carInit = false;
@@ -45,6 +47,7 @@ public class TCPIPServerAsync : MonoBehaviour
 
     private void Update()
     {
+
         //if(carPop != -1)
         if(carInit)
         {
@@ -54,6 +57,7 @@ public class TCPIPServerAsync : MonoBehaviour
                 cars.Add((GameObject)Instantiate(carPrefab, new Vector3(Int32.Parse(carPos[0]), 0, Int32.Parse(carPos[1])), Quaternion.identity, transform));
                 cars[i].GetComponent<Car>().nextX = Int32.Parse(carPos[0]);
                 cars[i].GetComponent<Car>().nextZ = Int32.Parse(carPos[1]);
+                cars[i].GetComponent<Car>().nextAngle = Quaternion.identity;
 
             }
             carInit = false;
@@ -90,16 +94,20 @@ public class TCPIPServerAsync : MonoBehaviour
                     switch (dir)
                     {
                         case "up":
-                            transform.GetChild(id).rotation = Quaternion.Euler(0, 90, 0);
+                            //transform.GetChild(id).rotation = Quaternion.Euler(0, 90, 0);
+                            transform.GetChild(id).GetComponent<Car>().nextAngle = Quaternion.Euler(0, 90, 0);
                             break;
                         case "down":
-                            transform.GetChild(id).rotation = Quaternion.Euler(0, -90, 0);
+                            //transform.GetChild(id).rotation = Quaternion.Euler(0, -90, 0);
+                            transform.GetChild(id).GetComponent<Car>().nextAngle = Quaternion.Euler(0, -90, 0);
                             break;
                         case "left":
-                            transform.GetChild(id).rotation = Quaternion.Euler(0, 0, 0);
+                            //transform.GetChild(id).rotation = Quaternion.Euler(0, 0, 0);
+                            transform.GetChild(id).GetComponent<Car>().nextAngle = Quaternion.Euler(0, 0, 0);
                             break;
                         case "right":
-                            transform.GetChild(id).rotation = Quaternion.Euler(0, 180, 0);
+                            //transform.GetChild(id).rotation = Quaternion.Euler(0, 180, 0);
+                            transform.GetChild(id).GetComponent<Car>().nextAngle = Quaternion.Euler(0, 180, 0);
                             break;
                     }
                 }
@@ -120,6 +128,7 @@ public class TCPIPServerAsync : MonoBehaviour
         {
             int x = transform.GetChild(i).GetComponent<Car>().nextX;
             int z = transform.GetChild(i).GetComponent<Car>().nextZ;
+            Quaternion angle = transform.GetChild(i).GetComponent<Car>().nextAngle;
             //Debug.Log("ID: " + i);
             //Debug.Log("X: " + x);
             //Debug.Log("Z: " + z);
@@ -127,10 +136,12 @@ public class TCPIPServerAsync : MonoBehaviour
             if (transform.GetChild(i).GetComponent<Car>().respawning == "false")
             {
                 transform.GetChild(i).position = Vector3.MoveTowards(transform.GetChild(i).position, new Vector3(x, 0, z), 1f/stepFrames);
+                transform.GetChild(i).rotation = Quaternion.Slerp(transform.GetChild(i).rotation, angle, 1f/stepFrames);
             }
             else
             {
                 transform.GetChild(i).position = new Vector3(x, 0, z);
+                transform.GetChild(i).rotation = angle;
             }
         }
         frameCount++;
@@ -230,6 +241,11 @@ public class TCPIPServerAsync : MonoBehaviour
                     }
 
                     data = System.Text.Encoding.ASCII.GetString(bytes, 0, bytesRec);
+                    if (data.IndexOf("<EOF>") > -1)
+                    {
+                        keepReading = false;
+                        break;
+                    }
 
                     string[] dataBuffer = (data.Split('%'));
                     string[] carDataBuffer = (dataBuffer[0].Split('$'));
@@ -268,6 +284,7 @@ public class TCPIPServerAsync : MonoBehaviour
         {
             Debug.Log(e.ToString());
         }
+        Debug.Log("Simulation end");
     }
 
     void stopServer()

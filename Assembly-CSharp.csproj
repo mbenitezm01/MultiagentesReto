@@ -57,10 +57,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\ChangeColor.cs" />
+    <Compile Include="Assets\Scripts\StoplightController.cs" />
     <Compile Include="Assets\Scripts\Car.cs" />
     <Compile Include="Assets\Scripts\TCPIPServerAsync.cs" />
     <Compile Include="Assets\Scripts\ChangeColorPrefab.cs" />
-    <Compile Include="Assets\Scripts\StoplightController.cs" />
+    <Compile Include="Assets\Scripts\SliderToText.cs" />
+    <Compile Include="Assets\Scripts\RestartButton.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\POLYGON city pack\Read_me.txt" />

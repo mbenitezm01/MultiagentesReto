@@ -6,6 +6,7 @@ public class Car : MonoBehaviour
 {
     public int nextX;
     public int nextZ;
+    public Quaternion nextAngle;
     public string respawning;
 
     private void Start()
@@ -19,5 +20,10 @@ public class Car : MonoBehaviour
     {
         nextX = x;
         nextZ = z;
+    }
+
+    public void newAngle(Quaternion angle)
+    {
+        nextAngle = angle;
     }
 }
